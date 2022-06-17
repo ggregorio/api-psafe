@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: Template
+parameters:
+  - name: APPLICATION_NAME
+    displayName: Application Name
+    description: The name for the application.
+  - name: APPLICATION_LABEL
+    displayName: Application Label
+    description: The label for the application common between other resources.
+  - name: READINESS_PROBE_PATH
+    displayName: Readiness Probe
+    description: Readiness Health Probe, include the base path of the server if necessary.
+  - name: LIVENESS_PROBE_PATH
+    displayName: Liveness Health Probe
+    description: Liveness Health Probe, include the base path of the server if necessary.
+  - name: ENVIRONMENT
+    displayName: Environment
+    description: Environment where the project is currently deployed.
+  - name: PROGRAM_ID
+    displayName: Program ID
+    description: The ID of the Program this app belongs to.
+  - name: REPLICAS
+    displayName: Replicas
+    description: Number of Replicas that the app will deploy at once.
+  - name: CMDB
+
+#########################################
+################ OBJECTS ################
+#########################################
+objects:
+
+  #########################################
+  ########### DEPLOYMENT CONFIG ###########
+  #########################################
+  - kind: DeploymentConfig
+    apiVersion: v1
+    metadata:
+      name: ${APPLICATION_NAME}
+      labels:
+        app: ${APPLICATION_NAME}
+        env: ${ENVIRONMENT}
+        programid: ${PROGRAM_ID}
+        deploymentConfig: ${APPLICATION_NAME}
+        cmdb: ${CMDB}
+    spec:
+      strategy:
+        type: Recreate
+      replicas: ${{REPLICAS}}
+      selector:
+        deploymentConfig: ${APPLICATION_NAME}
+        app: ${APPLICATION_NAME}
+      template:
+        metadata:
+          name: ${APPLICATION_NAME}
+          labels:
+            app: ${APPLICATION_NAME}
+            env: ${ENVIRONMENT}
+            programid: ${PROGRAM_ID}
+            deploymentConfig: ${APPLICATION_NAME}
+            cmdb: ${CMDB}
+          annotations:                                             
+            alpha.image.policy.openshift.io/resolve-names: '*'
+        spec:
+          containers:
+            - name: ${APPLICATION_NAME}
+              image: '${APPLICATION_NAME}:default'
+              env:
+                - name: BASE
+                  valueFrom:
+                    configMapKeyRef:
+                      key: BASE
+                      name: devops-credentials-cm
+                - name: RUNAS
+                  valueFrom:
+                    configMapKeyRef:
+                      key: RUNAS
+                      name: devops-credentials-cm
+                - name: PSKEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: PSKEY
+                      name: devops-credentials-key
+              ports:
+                - name: http
+                  containerPort: 8080
+                  protocol: TCP
+                - name: https
+                  containerPort: 8443
+                  protocol: TCP
+              terminationMessagePath: /dev/termination-log
+              terminationGracePeriodSeconds: 75
+              readinessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: ${READINESS_PROBE_PATH}
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+              livenessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: ${LIVENESS_PROBE_PATH}
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 15
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+
+
+  #########################################
+  ################ SERVICE ################
+  #########################################
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: ${APPLICATION_NAME}
+      labels:
+        app: ${APPLICATION_NAME}
+        env: ${ENVIRONMENT}
+        programid: ${PROGRAM_ID}
+        deploymentConfig: ${APPLICATION_NAME}
+        cmdb: ${CMDB}
+      annotations:
+        description: The application's http port.
+    spec:
+      ports:
+        - port: 8080
+          targetPort: 8080
+      selector:
+        app: ${APPLICATION_NAME}
+        deploymentConfig: ${APPLICATION_NAME}
+      sessionAffinity: None
+      type: ClusterIP

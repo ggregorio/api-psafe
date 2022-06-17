@@ -1,0 +1,22 @@
+#### ConfigMap for Develompent ####
+apiVersion: v1
+kind: Template
+objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: devops-credentials-cm
+  data:
+    BASE: "https://sipbpsafe01.ar.bsch/BeyondTrust/api/public/v3"
+    RUNAS: "25deMayo\\A308078"
+
+#########################################
+################ SECRETS ################
+#########################################
+- kind: Secret
+  apiVersion: v1
+  metadata:
+    name: devops-credentials-key
+  type: Opaque
+  stringData:
+    PSKEY: "04c92bdb03c4cdcbdd82322e9acfb02e6bb9757706d0e85b3c33c8e3eb6de56d8cd9fdb583878a43629c0a62a1c3edabfb60626d9d12949ba8f681fe353dec27"

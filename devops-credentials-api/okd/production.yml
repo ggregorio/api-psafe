@@ -1,0 +1,11 @@
+#### ConfigMap for Develompent ####
+apiVersion: v1
+kind: Template
+objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: devops-credentials-cm
+  data:
+    BASE: "https://sipbpsafe1.ar.bsch/BeyondTrust/api/public/v3"
+    RUNAS: "api-user-gitlab"
